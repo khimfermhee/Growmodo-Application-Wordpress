@@ -1,0 +1,16 @@
+{
+  "name": "estatein-theme",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build scripts for the Estatein WordPress theme (minifies CSS and JS).",
+  "scripts": {
+    "build:css": "esbuild assets/css/main.css --minify --outfile=assets/css/main.min.css",
+    "build:js": "esbuild assets/js/main.js --minify --target=es2017 --outfile=assets/js/main.min.js",
+    "build": "npm run build:css && npm run build:js",
+    "zip": "npm run build && cd .. && zip -r estatein.zip estatein -x 'estatein/node_modules/*' 'estatein/package-lock.json' 'estatein/.git/*'"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  },
+  "license": "GPL-2.0-or-later"
+}

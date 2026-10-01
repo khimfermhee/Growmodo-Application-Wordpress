@@ -1,0 +1,40 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"meta": {
+		"title": "Estatein theme demo",
+		"description": "Installs the Estatein theme and Secure Custom Fields, then imports the demo content.",
+		"author": "khimfermhee"
+	},
+	"landingPage": "/",
+	"preferredVersions": {
+		"php": "8.2",
+		"wp": "latest"
+	},
+	"features": {
+		"networking": true
+	},
+	"steps": [
+		{ "step": "login", "username": "admin", "password": "password" },
+		{
+			"step": "installPlugin",
+			"pluginData": { "resource": "wordpress.org/plugins", "slug": "secure-custom-fields" },
+			"options": { "activate": true }
+		},
+		{
+			"step": "installTheme",
+			"themeData": {
+				"resource": "git:directory",
+				"url": "https://github.com/khimfermhee/Growmodo-Application-Wordpress",
+				"ref": "main",
+				"refType": "branch",
+				"path": "estatein"
+			},
+			"options": { "activate": true }
+		},
+		{ "step": "setSiteOptions", "options": { "blogname": "Estatein", "blogdescription": "Discover Your Dream Property" } },
+		{
+			"step": "runPHP",
+			"code": "<?php require_once '/wordpress/wp-load.php'; estatein_run_demo_import();"
+		}
+	]
+}

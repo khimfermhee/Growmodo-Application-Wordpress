@@ -1,0 +1,5 @@
+/* Block editor styles so blog posts look like the front end while writing. */
+@font-face{font-family:"Urbanist";font-weight:100 900;font-display:swap;src:url("../fonts/urbanist-latin-wght-normal.woff2") format("woff2")}
+.editor-styles-wrapper{background:#141414;color:#d6d6d6;font-family:"Urbanist",system-ui,sans-serif;font-size:16px;line-height:1.75}
+.editor-styles-wrapper h1,.editor-styles-wrapper h2,.editor-styles-wrapper h3,.editor-styles-wrapper .editor-post-title__input{color:#fff;font-weight:600;line-height:1.2}
+.editor-styles-wrapper a{color:#a685fa}
