@@ -38,6 +38,7 @@ $estatein_note = estatein_option( 'pricing_note' );
 			<div class="pricing__groups">
 				<?php foreach ( $args['groups'] as $estatein_group ) : ?>
 					<?php
+					$estatein_group['rows'] = estatein_rows( $estatein_group['rows'], array( 'label', 'amount', 'note', 'full' ) );
 					if ( empty( $estatein_group['rows'] ) ) {
 						continue;
 					}

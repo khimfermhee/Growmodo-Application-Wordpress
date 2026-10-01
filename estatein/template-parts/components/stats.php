@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$estatein_stats = estatein_option( 'stats' );
+$estatein_stats = estatein_rows( estatein_option( 'stats' ), array( 'number', 'label' ), estatein_default( 'options.stats' ) );
 if ( ! $estatein_stats ) {
 	return;
 }

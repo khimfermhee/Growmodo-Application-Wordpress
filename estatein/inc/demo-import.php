@@ -59,11 +59,45 @@ function estatein_setup_page() {
 			<?php if ( $imported ) : ?>
 				<p><em><?php esc_html_e( 'Already imported once. Running it again updates the demo items and keeps your other content.', 'estatein' ); ?></em></p>
 			<?php endif; ?>
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="estatein-import-form">
 				<input type="hidden" name="action" value="estatein_import_demo">
 				<?php wp_nonce_field( 'estatein_import_demo' ); ?>
 				<?php submit_button( $imported ? __( 'Re-run import', 'estatein' ) : __( 'Import demo content', 'estatein' ), 'primary large', 'submit', false ); ?>
+				<p id="estatein-import-progress" role="status" aria-live="polite" style="margin-top:12px"></p>
 			</form>
+			<script>
+			/* Runs the import in small steps so slow/free hosts never hit a request timeout. */
+			( function () {
+				var form = document.getElementById( 'estatein-import-form' );
+				var out = document.getElementById( 'estatein-import-progress' );
+				if ( ! form || ! window.fetch ) { return; }
+				form.addEventListener( 'submit', function ( e ) {
+					e.preventDefault();
+					var button = form.querySelector( '[type=submit]' );
+					button.disabled = true;
+					var nonce = form.querySelector( '[name=_wpnonce]' ).value;
+					function run( step ) {
+						var body = new FormData();
+						body.append( 'action', 'estatein_import_step' );
+						body.append( 'step', step );
+						body.append( '_wpnonce', nonce );
+						return fetch( ajaxurl, { method: 'POST', body: body, credentials: 'same-origin' } )
+							.then( function ( r ) { return r.json(); } )
+							.then( function ( json ) {
+								if ( ! json.success ) { throw new Error( json.data || 'Import failed' ); }
+								out.textContent = json.data.message;
+								if ( json.data.next ) { return run( json.data.next ); }
+								window.location = json.data.redirect;
+							} );
+					}
+					out.textContent = <?php echo wp_json_encode( __( 'Starting import…', 'estatein' ) ); ?>;
+					run( 'media' ).catch( function ( err ) {
+						out.textContent = <?php echo wp_json_encode( __( 'Import stopped: ', 'estatein' ) ); ?> + err.message + <?php echo wp_json_encode( __( ' – click the button again to continue where it stopped.', 'estatein' ) ); ?>;
+						button.disabled = false;
+					} );
+				} );
+			}() );
+			</script>
 		</div>
 	</div>
 	<?php
@@ -93,29 +127,146 @@ add_action( 'admin_post_estatein_import_demo', 'estatein_handle_import' );
  * Run the full import. Also callable from WP-CLI: wp eval 'estatein_run_demo_import();'
  */
 function estatein_run_demo_import() {
+	estatein_import_requires();
+	while ( estatein_import_media_batch( 50 ) > 0 ) {
+		continue;
+	}
+	foreach ( array( 'pages', 'options', 'properties', 'content', 'services', 'posts', 'menus' ) as $step ) {
+		estatein_import_run_step( $step );
+	}
+}
+
+/**
+ * Load the admin includes needed for media handling.
+ */
+function estatein_import_requires() {
 	require_once ABSPATH . 'wp-admin/includes/image.php';
 	require_once ABSPATH . 'wp-admin/includes/file.php';
 	require_once ABSPATH . 'wp-admin/includes/media.php';
-
-	$pages = estatein_import_pages();
-	estatein_import_options();
-	estatein_import_properties();
-	estatein_import_simple_types();
-	estatein_import_services();
-	estatein_import_posts();
-	estatein_import_menus( $pages );
-
-	update_option( 'show_on_front', 'page' );
-	update_option( 'page_on_front', $pages['home'] );
-	update_option( 'page_for_posts', $pages['blog'] );
-
-	if ( ! get_option( 'permalink_structure' ) ) {
-		update_option( 'permalink_structure', '/%postname%/' );
-	}
-	estatein_flush_rewrites();
-
-	update_option( 'estatein_demo_imported', time() );
 }
+
+/**
+ * Every demo image file referenced by the default content.
+ *
+ * @return string[]
+ */
+function estatein_demo_image_files() {
+	$files = array( 'office-workspace.jpg', 'office-team.jpg', 'office-meeting.jpg', 'office-team-2.jpg', 'office-team-3.jpg', 'office-handshake.jpg' );
+	foreach ( estatein_default( 'properties_list', array() ) as $p ) {
+		$files[] = $p['image'];
+		$files = array_merge( $files, $p['gallery'] );
+	}
+	foreach ( array( 'testimonials', 'team', 'posts' ) as $group ) {
+		foreach ( estatein_default( $group, array() ) as $item ) {
+			$files[] = $item['image'];
+		}
+	}
+	return array_values( array_unique( array_filter( $files ) ) );
+}
+
+/**
+ * Import up to $limit demo images that are not in the media library yet.
+ *
+ * @param int $limit Max images this call.
+ * @return int Images still left to import.
+ */
+function estatein_import_media_batch( $limit = 3 ) {
+	$map  = (array) get_option( 'estatein_demo_attachments', array() );
+	$todo = array();
+	foreach ( estatein_demo_image_files() as $file ) {
+		if ( empty( $map[ $file ] ) || ! get_post( $map[ $file ] ) ) {
+			$todo[] = $file;
+		}
+	}
+	foreach ( array_slice( $todo, 0, $limit ) as $file ) {
+		estatein_import_image( $file );
+	}
+	return max( 0, count( $todo ) - $limit );
+}
+
+/**
+ * Run one named import step.
+ *
+ * @param string $step Step name.
+ */
+function estatein_import_run_step( $step ) {
+	switch ( $step ) {
+		case 'pages':
+			update_option( 'estatein_demo_pages', estatein_import_pages(), false );
+			break;
+		case 'options':
+			estatein_import_options();
+			break;
+		case 'properties':
+			estatein_import_properties();
+			break;
+		case 'content':
+			estatein_import_simple_types();
+			break;
+		case 'services':
+			estatein_import_services();
+			break;
+		case 'posts':
+			estatein_import_posts();
+			break;
+		case 'menus':
+			$pages = (array) get_option( 'estatein_demo_pages', array() );
+			estatein_import_menus( $pages );
+			update_option( 'show_on_front', 'page' );
+			update_option( 'page_on_front', $pages['home'] );
+			update_option( 'page_for_posts', $pages['blog'] );
+			if ( ! get_option( 'permalink_structure' ) ) {
+				update_option( 'permalink_structure', '/%postname%/' );
+			}
+			estatein_flush_rewrites();
+			update_option( 'estatein_demo_imported', time() );
+			break;
+	}
+}
+
+/**
+ * AJAX: run one step of the import and say which step comes next.
+ */
+function estatein_ajax_import_step() {
+	if ( ! current_user_can( 'edit_theme_options' ) || ! check_ajax_referer( 'estatein_import_demo', '_wpnonce', false ) ) {
+		wp_send_json_error( __( 'Permission denied. Reload the page and try again.', 'estatein' ) );
+	}
+	if ( function_exists( 'set_time_limit' ) ) {
+		set_time_limit( 120 ); // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged
+	}
+	estatein_import_requires();
+
+	$steps = array( 'pages', 'options', 'properties', 'content', 'services', 'posts', 'menus' );
+	$step  = isset( $_POST['step'] ) ? sanitize_key( wp_unslash( $_POST['step'] ) ) : 'media';
+
+	if ( 'media' === $step ) {
+		$left = estatein_import_media_batch( 3 );
+		wp_send_json_success(
+			array(
+				/* translators: %d: images left */
+				'message' => sprintf( __( 'Importing images… %d left', 'estatein' ), $left ),
+				'next'    => $left > 0 ? 'media' : 'pages',
+			)
+		);
+	}
+
+	$index = array_search( $step, $steps, true );
+	if ( false === $index ) {
+		wp_send_json_error( __( 'Unknown step.', 'estatein' ) );
+	}
+	estatein_import_run_step( $step );
+	$next = $steps[ $index + 1 ] ?? '';
+
+	wp_send_json_success(
+		array(
+			/* translators: 1: step number, 2: total steps */
+			'message'  => sprintf( __( 'Importing content… step %1$d of %2$d', 'estatein' ), $index + 1, count( $steps ) ),
+			'next'     => $next,
+			'redirect' => admin_url( 'themes.php?page=estatein-setup&imported=1' ),
+		)
+	);
+}
+add_action( 'wp_ajax_estatein_import_step', 'estatein_ajax_import_step' );
 
 /**
  * Save a field through SCF/ACF when available, otherwise as raw meta in the

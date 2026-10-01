@@ -379,3 +379,32 @@ function estatein_footer_columns() {
 function estatein_icon_badge( $icon, $size = 'md' ) {
 	return '<span class="icon-badge icon-badge--' . esc_attr( $size ) . '" aria-hidden="true"><span class="icon-badge__inner">' . estatein_icon( $icon ? $icon : 'star' ) . '</span></span>';
 }
+
+/**
+ * Normalise repeater rows so templates never break on unexpected data
+ * (e.g. a field saved before the fields plugin was active returns a row
+ * count instead of rows). Invalid input falls back to $default.
+ *
+ * @param mixed    $rows    Repeater value.
+ * @param string[] $keys    Sub field names every row must have.
+ * @param array    $default Rows used when $rows is unusable.
+ * @return array[]
+ */
+function estatein_rows( $rows, $keys, $default = array() ) {
+	$clean = array();
+	if ( is_array( $rows ) ) {
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			foreach ( $keys as $key ) {
+				$row[ $key ] = isset( $row[ $key ] ) && is_scalar( $row[ $key ] ) ? (string) $row[ $key ] : ( isset( $row[ $key ] ) && is_array( $row[ $key ] ) ? $row[ $key ] : '' );
+			}
+			$clean[] = $row;
+		}
+	}
+	if ( ! $clean && $default !== $rows ) {
+		return $default ? estatein_rows( $default, $keys ) : array();
+	}
+	return $clean;
+}

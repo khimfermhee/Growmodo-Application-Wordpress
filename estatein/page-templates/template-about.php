@@ -59,7 +59,7 @@ $estatein_journey_image = estatein_page_field( 'about', 'journey_image' );
 		);
 		?>
 		<ul class="card values-grid">
-			<?php foreach ( (array) estatein_page_field( 'about', 'values' ) as $estatein_value ) : ?>
+			<?php foreach ( estatein_rows( estatein_page_field( 'about', 'values' ), array( 'icon', 'title', 'text' ), estatein_default( 'about.values' ) ) as $estatein_value ) : ?>
 				<li class="values-grid__item">
 					<div class="values-grid__head">
 						<span class="values-grid__icon" aria-hidden="true"><?php echo estatein_icon( $estatein_value['icon'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
@@ -85,7 +85,7 @@ $estatein_journey_image = estatein_page_field( 'about', 'journey_image' );
 		);
 		?>
 		<ul class="grid grid--3">
-			<?php foreach ( (array) estatein_page_field( 'about', 'achievements' ) as $estatein_item ) : ?>
+			<?php foreach ( estatein_rows( estatein_page_field( 'about', 'achievements' ), array( 'title', 'text' ), estatein_default( 'about.achievements' ) ) as $estatein_item ) : ?>
 				<li class="card card--glow achievement">
 					<h3 class="achievement__title"><?php echo esc_html( $estatein_item['title'] ); ?></h3>
 					<p><?php echo esc_html( $estatein_item['text'] ); ?></p>
@@ -108,7 +108,7 @@ $estatein_journey_image = estatein_page_field( 'about', 'journey_image' );
 		);
 		?>
 		<ol class="grid grid--3 steps">
-			<?php foreach ( (array) estatein_page_field( 'about', 'steps' ) as $estatein_i => $estatein_step ) : ?>
+			<?php foreach ( estatein_rows( estatein_page_field( 'about', 'steps' ), array( 'title', 'text' ), estatein_default( 'about.steps' ) ) as $estatein_i => $estatein_step ) : ?>
 				<li class="step">
 					<p class="step__label"><?php echo esc_html( sprintf( /* translators: %s: step number */ __( 'Step %s', 'estatein' ), estatein_pad( $estatein_i + 1 ) ) ); ?></p>
 					<div class="step__card">

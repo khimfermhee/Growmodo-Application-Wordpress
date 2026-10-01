@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$estatein_links = estatein_option( 'quick_links' );
+$estatein_links = estatein_rows( estatein_option( 'quick_links' ), array( 'icon', 'title', 'url' ), estatein_default( 'options.quick_links' ) );
 if ( ! $estatein_links ) {
 	return;
 }

@@ -14,8 +14,8 @@ while ( have_posts() ) :
 	the_post();
 	$estatein_id       = get_the_ID();
 	$estatein_property = estatein_property_data( $estatein_id );
-	$estatein_features = (array) estatein_field( 'features', array(), $estatein_id );
-	$estatein_pricing  = (array) estatein_field( 'pricing_groups', array(), $estatein_id );
+	$estatein_features = estatein_rows( estatein_field( 'features', array(), $estatein_id ), array( 'text' ) );
+	$estatein_pricing  = estatein_rows( estatein_field( 'pricing_groups', array(), $estatein_id ), array( 'title', 'rows' ) );
 	?>
 
 	<section class="section property-intro" aria-labelledby="page-title">
